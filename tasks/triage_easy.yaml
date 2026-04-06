@@ -1,0 +1,19 @@
+task_id: triage_easy
+description: "Single patient with unambiguous vital signs and no comorbidities"
+difficulty: easy
+
+patients_per_episode: 1
+noise_level: 0.05
+ambiguity: low
+comorbidities: false
+queue: false
+time_pressure: false
+
+success_threshold: 0.85
+max_steps: 20
+
+notes: >
+  Easy mode introduces the agent to clear-cut triage decisions.
+  Vital signs are close to textbook dangerous or textbook normal.
+  No medical history complicates the decision.
+  A rule-based agent should achieve ~90% accuracy here.

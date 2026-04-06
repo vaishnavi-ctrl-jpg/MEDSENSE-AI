@@ -1,0 +1,20 @@
+task_id: triage_medium
+description: "Single patient with comorbidities and ambiguous presentation"
+difficulty: medium
+
+patients_per_episode: 1
+noise_level: 0.10
+ambiguity: medium
+comorbidities: true
+queue: false
+time_pressure: false
+
+success_threshold: 0.72
+max_steps: 30
+
+notes: >
+  Medium mode introduces comorbidities (cardiac history, diabetes).
+  Vital signs may be borderline — not clearly dangerous or safe.
+  The agent must use medical history to contextualise vitals.
+  Example: HR 108 is borderline for a healthy patient but urgent for
+  someone with cardiac history. A rule-based agent drops to ~70% here.
