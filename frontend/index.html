@@ -1,1 +1,916 @@
-pooja paste code here ....... before pasting check rae the changes done .......... then paste 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MedSense AI — Live Triage Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #081017;
+  --panel:   #0f1924;
+  --card:    #152232;
+  --border:  #1e3246;
+  --cyan:    #00e5ff;
+  --text:    #e2e8f0;
+  --muted:   #8b9eb3;
+  --red:     #ef4444;
+  --yellow:  #f59e0b;
+  --blue:    #3b82f6;
+  --green:   #10b981;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Inter',sans-serif;}
+body{background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* NAVBAR */
+.navbar{display:flex;justify-content:space-between;align-items:center;padding:0 20px;height:55px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0;}
+.logo{font-size:1rem;font-weight:700;color:var(--cyan);display:flex;align-items:center;gap:8px;letter-spacing:1px;}
+.nav-menu{display:flex;gap:24px;align-items:center;font-size:0.8rem;font-weight:500;}
+.nav-item{color:var(--muted);cursor:pointer;padding:4px 0;border-bottom:2px solid transparent;}
+.nav-item.active{color:var(--cyan);border-bottom:2px solid var(--cyan);}
+.nav-right{display:flex;align-items:center;gap:16px;}
+.status-pill{display:flex;align-items:center;gap:6px;font-size:0.75rem;padding:4px 10px;border-radius:20px;border:1px solid;font-weight:600;}
+.status-pill.online{color:var(--green);border-color:var(--green);background:rgba(16,185,129,0.1);}
+.status-pill.offline{color:var(--red);border-color:var(--red);background:rgba(239,68,68,0.1);}
+.status-pill.checking{color:var(--yellow);border-color:var(--yellow);background:rgba(245,158,11,0.1);}
+.dot-pulse{width:7px;height:7px;border-radius:50%;background:currentColor;}
+.task-select{background:var(--card);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:5px;font-size:0.78rem;cursor:pointer;}
+
+/* MAIN GRID */
+.main{display:grid;grid-template-columns:22% 1fr 1fr;gap:12px;padding:12px;height:calc(100vh - 55px);overflow:hidden;}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.panel-title{font-size:0.78rem;font-weight:700;color:#fff;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;}
+
+/* PATIENT QUEUE */
+.patient-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;padding-right:3px;}
+.patient-list::-webkit-scrollbar{width:4px;}
+.patient-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+.p-card{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:12px;display:flex;align-items:center;gap:12px;cursor:pointer;border-left:4px solid transparent;position:relative;transition:all 0.2s;flex-shrink:0;}
+.p-card:hover{border-color:rgba(0,229,255,0.3);}
+.p-card.active{border-color:var(--cyan);box-shadow:0 0 12px rgba(0,229,255,0.12);}
+.p-card.crit{border-left-color:var(--red);}
+.p-card.urg{border-left-color:var(--yellow);}
+.p-card.stab{border-left-color:var(--blue);}
+.p-avatar{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#1e3a5f,#2d5a8e);display:flex;align-items:center;justify-content:center;font-size:1.1rem;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden;}
+.p-info h4{font-size:0.9rem;font-weight:600;margin-bottom:2px;}
+.p-info p{font-size:0.72rem;color:var(--muted);margin-bottom:6px;}
+.badge{font-size:0.68rem;padding:3px 8px;border-radius:3px;font-weight:700;display:inline-block;}
+.badge.red{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);}
+.badge.yellow{background:rgba(245,158,11,0.15);color:var(--yellow);border:1px solid rgba(245,158,11,0.3);}
+.badge.blue{background:rgba(59,130,246,0.15);color:var(--blue);border:1px solid rgba(59,130,246,0.3);}
+.badge.green{background:rgba(16,185,129,0.15);color:var(--green);border:1px solid rgba(16,185,129,0.3);}
+.waiting-tag{position:absolute;top:10px;right:10px;font-size:0.6rem;color:var(--muted);}
+.queue-controls{display:flex;gap:8px;margin-bottom:10px;flex-shrink:0;}
+.q-btn{flex:1;padding:6px;font-size:0.72rem;font-weight:600;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:5px;cursor:pointer;transition:all 0.15s;}
+.q-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.q-btn.primary{background:rgba(0,229,255,0.1);border-color:var(--cyan);color:var(--cyan);}
+
+/* TRIAGE DECISION */
+.patient-header{border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px;flex-shrink:0;}
+.patient-header .tag{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+.patient-header h2{font-size:1.2rem;font-weight:600;}
+.vitals-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px;flex-shrink:0;}
+.vitals-grid h5{font-size:0.62rem;color:var(--cyan);text-transform:uppercase;margin-bottom:6px;font-weight:600;letter-spacing:0.5px;}
+.vitals-grid p{font-size:0.8rem;margin-bottom:3px;}
+.vital-danger{color:var(--red);font-weight:600;}
+.vital-warn{color:var(--yellow);font-weight:600;}
+.vital-ok{color:var(--green);}
+.sec-label{color:var(--cyan);font-size:0.7rem;text-transform:uppercase;margin-bottom:8px;font-weight:700;letter-spacing:0.5px;flex-shrink:0;}
+.action-buttons{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;flex-shrink:0;}
+.act-btn{background:var(--card);border:1px solid var(--border);padding:11px 14px;border-radius:6px;display:flex;align-items:center;gap:12px;cursor:pointer;color:#fff;font-size:0.85rem;transition:all 0.2s;user-select:none;}
+.act-btn:hover{border-color:rgba(0,229,255,0.4);background:rgba(0,229,255,0.05);}
+.act-btn.active{border-color:var(--cyan);background:linear-gradient(90deg,rgba(0,229,255,0.12) 0%,transparent 100%);box-shadow:inset 0 0 15px rgba(0,229,255,0.08);}
+.act-btn.selected-treat{border-color:var(--red);background:rgba(239,68,68,0.08);}
+.act-btn.selected-delay{border-color:var(--yellow);background:rgba(245,158,11,0.08);}
+.act-btn.selected-refer{border-color:var(--blue);background:rgba(59,130,246,0.08);}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.dot.red{background:var(--red);box-shadow:0 0 6px var(--red);}
+.dot.yellow{background:var(--yellow);}
+.dot.blue{background:var(--blue);}
+.btn-label{flex:1;}
+.btn-sub{color:var(--muted);font-weight:400;font-size:0.78rem;}
+.confirm-btn{width:100%;padding:10px;border-radius:6px;border:none;font-size:0.85rem;font-weight:700;cursor:pointer;transition:all 0.2s;letter-spacing:0.5px;margin-bottom:10px;flex-shrink:0;}
+.confirm-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.confirm-btn.ready{background:var(--cyan);color:#000;}
+.confirm-btn.ready:hover{background:#00ccff;}
+.reasoning-box{background:#0c1621;border:1px solid var(--border);border-radius:6px;padding:12px;font-size:0.8rem;line-height:1.5;color:var(--text);flex:1;overflow-y:auto;}
+
+/* RIGHT PANEL */
+.metrics-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;flex-shrink:0;}
+.metric-box{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px 12px;}
+.metric-box h5{font-size:0.6rem;color:var(--muted);text-transform:uppercase;margin-bottom:4px;font-weight:500;}
+.metric-box p{font-size:1rem;font-weight:600;}
+.metric-box p.green{color:var(--green);}
+.metric-box p.cyan{color:var(--cyan);}
+.log-area{height:130px;overflow-y:auto;margin-bottom:10px;font-size:0.72rem;color:var(--muted);flex-shrink:0;}
+.log-entry{padding:3px 0;border-bottom:1px solid rgba(30,50,70,0.5);}
+.log-entry .pos{color:var(--green);}
+.log-entry .neg{color:var(--red);}
+.chart-wrap{flex:1;min-height:100px;position:relative;}
+
+/* AUTO mode toggle */
+.auto-row{display:flex;gap:8px;margin-bottom:10px;flex-shrink:0;}
+.auto-btn{flex:1;padding:7px;font-size:0.75rem;font-weight:600;border-radius:5px;cursor:pointer;border:1px solid var(--border);background:var(--card);color:var(--muted);transition:all 0.15s;}
+.auto-btn.active{background:rgba(16,185,129,0.15);border-color:var(--green);color:var(--green);}
+.auto-btn.stop{background:rgba(239,68,68,0.1);border-color:var(--red);color:var(--red);}
+
+/* SPINNER */
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(0,229,255,0.3);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* OFFLINE BANNER */
+.offline-banner{display:none;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--yellow);font-size:0.75rem;padding:6px 14px;text-align:center;flex-shrink:0;}
+
+/* TASK BADGE */
+.task-badge{font-size:0.65rem;padding:3px 8px;border-radius:3px;font-weight:700;background:rgba(0,229,255,0.1);border:1px solid rgba(0,229,255,0.3);color:var(--cyan);}
+
+/* GRADE RESULT */
+.grade-result{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:10px;font-size:0.75rem;margin-bottom:8px;flex-shrink:0;}
+.grade-result.pass{border-color:var(--green);}
+.grade-result.fail{border-color:var(--red);}
+</style>
+</head>
+<body>
+
+<div class="offline-banner" id="offlineBanner" style="display:none;">
+  <strong>⚠ Simulation Mode</strong> — Backend not detected. Run <code style="background:rgba(0,0,0,0.3);padding:1px 6px;border-radius:3px;">python backend/api.py</code> then click
+  <button onclick="retryConnection()" style="margin-left:6px;padding:2px 10px;border:1px solid var(--yellow);background:transparent;color:var(--yellow);border-radius:3px;cursor:pointer;font-size:0.75rem;font-weight:600;">↺ Retry Connection</button>
+</div>
+
+<div class="navbar">
+  <div style="display:flex;align-items:center;gap:32px;">
+    <div class="logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      MEDSENSE AI
+    </div>
+    <div class="nav-menu">
+      <div class="nav-item active">Dashboard</div>
+    </div>
+  </div>
+  <div class="nav-right">
+    <select class="task-select" id="taskSelect" onchange="onTaskChange()">
+      <option value="triage_easy">Easy — Clear Vitals (1 patient)</option>
+      <option value="triage_medium">Medium — Ambiguous + Comorbidities (1 patient)</option>
+      <option value="triage_hard">Hard — 5-Patient Queue + Time Pressure</option>
+    </select>
+    <div class="status-pill checking" id="apiStatus">
+      <div class="dot-pulse"></div>
+      <span id="apiStatusText">Connecting...</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="text-align:right;">
+        <div style="font-size:0.75rem;font-weight:600;color:#fff;" id="clockEl">--:-- --</div>
+        <div style="font-size:0.65rem;color:var(--muted);" id="dateEl">Loading...</div>
+      </div>
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#0d4f6e,#1a8fa8);border:2px solid var(--cyan);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;overflow:hidden;" id="docAvatar" title="Dr. Profile">
+        <img src="images/Dr. Sharma.png" alt="Dr. Sharma" style="width: 100%; height: 100%; object-fit: cover;">
+      </div>
+      <div>
+        <div style="font-size:0.75rem;font-weight:600;color:#fff;">Dr. Sharma</div>
+        <div style="font-size:0.62rem;color:var(--cyan);">Emergency Medicine</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="panel">
+    <div class="panel-title">
+      Patient Queue
+      <span id="queueCount" class="task-badge">0 waiting</span>
+    </div>
+    <div class="queue-controls">
+      <button class="q-btn primary" onclick="doReset()">↺ New Episode</button>
+      <button class="q-btn" onclick="runGrader()">⚡ Grade</button>
+    </div>
+    <div class="patient-list" id="patientList">
+      <div style="color:var(--muted);font-size:0.8rem;text-align:center;margin-top:20px;">
+        Click "New Episode" to start
+      </div>
+    </div>
+    <div class="grade-result" id="gradeResult" style="display:none;margin-top:8px;"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Triage Decision</div>
+
+    <div class="patient-header" id="patientHeader">
+      <div class="tag">Selected Patient</div>
+      <h2 id="patientName">— No patient selected —</h2>
+      <div style="font-size:0.72rem;color:var(--muted);margin-top:2px;" id="patientMeta"></div>
+    </div>
+
+    <div class="vitals-grid" id="vitalsGrid">
+      <div>
+        <h5>Vital Signs</h5>
+        <p id="vBP" class="vital-ok">BP: —</p>
+        <p id="vHR" class="vital-ok">HR: —</p>
+        <p id="vSpO2" class="vital-ok">SpO2: —</p>
+        <p id="vTemp" class="vital-ok">Temp: —</p>
+        <p id="vRR" class="vital-ok">RR: —</p>
+      </div>
+      <div>
+        <h5>Chief Complaint</h5>
+        <p id="vComplaint" style="color:var(--text);">—</p>
+        <p id="vPain" style="color:var(--muted);font-size:0.75rem;margin-top:4px;"></p>
+      </div>
+      <div>
+        <h5>Medical History</h5>
+        <p id="vHistory" style="color:var(--text);">—</p>
+      </div>
+    </div>
+
+    <div class="sec-label">Agent's Decision</div>
+    <div class="action-buttons">
+      <div class="act-btn" id="btn0" onclick="selectAction(0)">
+        <div class="dot red"></div>
+        <div class="btn-label"><strong>TREAT NOW</strong> <span class="btn-sub">(Immediate ED Admission)</span></div>
+      </div>
+      <div class="act-btn" id="btn1" onclick="selectAction(1)">
+        <div class="dot yellow"></div>
+        <div class="btn-label"><strong>DELAY</strong> <span class="btn-sub">(Place in Waiting Area)</span></div>
+      </div>
+      <div class="act-btn" id="btn2" onclick="selectAction(2)">
+        <div class="dot blue"></div>
+        <div class="btn-label"><strong>REFER</strong> <span class="btn-sub">(To Urgent Care / Clinic)</span></div>
+      </div>
+    </div>
+
+    <button class="confirm-btn" id="confirmBtn" onclick="submitAction()" disabled>
+      Select an action to confirm
+    </button>
+
+    <div class="sec-label">Agent's Reasoning</div>
+    <div class="reasoning-box" id="reasoningBox">
+      Waiting for patient selection...
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">
+      Environment Status & Performance
+      <span id="taskLabel" class="task-badge">Easy</span>
+    </div>
+
+    <div class="metrics-row">
+      <div class="metric-box">
+        <h5>Total Reward</h5>
+        <p class="green" id="mReward">+0.0</p>
+      </div>
+      <div class="metric-box">
+        <h5>Win Rate</h5>
+        <p class="cyan" id="mWinRate">0%</p>
+      </div>
+      <div class="metric-box">
+        <h5>Episodes</h5>
+        <p id="mEpisodes">0</p>
+      </div>
+      <div class="metric-box">
+        <h5>Critical Miss</h5>
+        <p id="mCritMiss" class="green">0%</p>
+      </div>
+    </div>
+
+    <div class="auto-row">
+      <button class="auto-btn" id="autoBtn" onclick="toggleAuto()">▶ Auto Play</button>
+      <button class="auto-btn" onclick="doStep()">→ Step Once</button>
+    </div>
+
+    <div class="panel-title" style="margin-bottom:6px;">
+      <span>Real-Time Log</span>
+      <span style="color:var(--muted);font-size:0.7rem;" id="logCount">0 entries</span>
+    </div>
+    <div class="log-area" id="logArea">
+      <div class="log-entry" style="color:var(--muted);">Waiting for simulation...</div>
+    </div>
+
+    <div class="panel-title" style="margin-bottom:6px;flex-shrink:0;">
+      <span>Reward Over Time</span>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="perfChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════════════════════════════
+const API = "http://localhost:5000/api";
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let apiOnline      = false;
+let selectedAction = null;
+let currentTask    = 'triage_easy';
+let autoInterval   = null;
+let autoRunning    = false;
+let episodeReward  = 0;
+let totalEpisodes  = 0;
+let totalWins      = 0;
+let critMisses     = 0;
+let totalDecisions = 0;
+let rewardHistory  = [];
+let logEntries     = [];
+let currentPatient = null;
+let patientQueue   = [];
+let queueIndex     = 0;
+let episodeDone    = false;
+
+// ── Fallback patient pool (Mapped exactly to your images folder) ─────────────
+const COMPLAINTS = ['Chest Pain','Shortness of Breath','Abdominal Pain','Head Injury',
+  'Fever','Dizziness','Allergic Reaction','Fracture','Mental Health','Minor Wound'];
+const NAMES_F = ['Emma k','LIsa R','Neha p','Priya K'];
+const NAMES_M = ['David A','Marco R','Omar S','Raj P'];
+
+function genPatient(severity) {
+  const isCrit = severity === 'CRITICAL';
+  const isUrg  = severity === 'URGENT';
+  const gender = Math.random()>0.5?'F':'M';
+  const name   = gender==='F'?NAMES_F[Math.floor(Math.random()*NAMES_F.length)]:NAMES_M[Math.floor(Math.random()*NAMES_M.length)];
+  const age    = 20+Math.floor(Math.random()*60);
+
+  let bp_sys, hr, spo2, temp, rr, complaint, cardiac=0, reasoning;
+  if(isCrit){
+    bp_sys = [185,210][Math.floor(Math.random()*2)] + Math.random()*10;
+    hr     = 115 + Math.random()*20;
+    spo2   = 84 + Math.random()*7;
+    temp   = 37 + Math.random()*1.5;
+    rr     = 22 + Math.random()*8;
+    complaint = [0,1,3][Math.floor(Math.random()*3)];
+    cardiac = 1;
+    reasoning = `SpO2 ${spo2.toFixed(0)}% (critical hypoxia) + BP ${bp_sys.toFixed(0)} mmHg (hypertensive crisis) + HR ${hr.toFixed(0)}bpm (tachycardia).\n\nClinical assessment: HIGH ACUITY — CRITICAL.\nRequired Action: TREAT NOW immediately.`;
+  } else if(isUrg){
+    bp_sys = 140+Math.random()*20;
+    hr     = 95+Math.random()*15;
+    spo2   = 93+Math.random()*4;
+    temp   = 37.5+Math.random()*1.5;
+    rr     = 18+Math.random()*6;
+    complaint = [0,2,5][Math.floor(Math.random()*3)];
+    cardiac = Math.random()>0.5?1:0;
+    reasoning = `BP ${bp_sys.toFixed(0)} mmHg (elevated) + HR ${hr.toFixed(0)}bpm.\n\nClinical assessment: URGENT — needs timely attention.\nRequired Action: TREAT NOW.`;
+  } else {
+    bp_sys = 105+Math.random()*25;
+    hr     = 62+Math.random()*28;
+    spo2   = 96+Math.random()*4;
+    temp   = 36.5+Math.random()*0.8;
+    rr     = 13+Math.random()*5;
+    complaint = [4,7,8,9][Math.floor(Math.random()*4)];
+    reasoning = `All vitals within normal range. BP ${bp_sys.toFixed(0)} mmHg, SpO2 ${spo2.toFixed(0)}%, HR ${hr.toFixed(0)}bpm.\n\nClinical assessment: STABLE.\nRequired Action: DELAY — safe to wait.`;
+  }
+
+  const correctAction = isCrit?0:isUrg?0:(complaint===7||complaint===8)?2:1;
+  const history = cardiac?'HTN, Cardiac History':'No significant history';
+  return {name,age,gender,severity,bp_sys:bp_sys.toFixed(1),bp_dia:(bp_sys*0.65).toFixed(1),
+    hr:hr.toFixed(1),spo2:spo2.toFixed(1),temp:temp.toFixed(1),rr:rr.toFixed(1),
+    complaint,pain:Math.floor(Math.random()*7)+2,cardiac,history,reasoning,correctAction};
+}
+
+function genQueue(task) {
+  if(task==='triage_hard'){
+    const severities = ['CRITICAL','CRITICAL','URGENT','URGENT','STABLE'];
+    return severities.sort(()=>Math.random()-0.5).map(s=>genPatient(s));
+  }
+  const r = Math.random();
+  const sev = r<0.4?'CRITICAL':r<0.7?'URGENT':'STABLE';
+  return [genPatient(sev)];
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// API LAYER
+// ══════════════════════════════════════════════════════════════════════════════
+async function apiCall(path, method='GET', body=null) {
+  const base = window._API || API;
+  const opts = {method, headers:{'Content-Type':'application/json'}, signal: AbortSignal.timeout(5000)};
+  if(body) opts.body = JSON.stringify(body);
+  const res = await fetch(base+path, opts);
+  if(!res.ok) throw new Error('HTTP '+res.status);
+  return res.json();
+}
+
+async function checkAPI() {
+  setStatus('checking','Connecting...');
+  // Try both localhost and 127.0.0.1
+  const hosts = ['http://localhost:5000/api', 'http://127.0.0.1:5000/api'];
+  for(const host of hosts){
+    for(let attempt=1; attempt<=2; attempt++){
+      try {
+        const r = await fetch(host+'/health', {signal: AbortSignal.timeout(2000)});
+        if(r.ok){
+          window._API = host;
+          apiOnline = true;
+          setStatus('online','Backend Online ✓');
+          document.getElementById('offlineBanner').style.display='none';
+          addLog('✓ Connected to Python backend at '+host, 'pos');
+          return;
+        }
+      } catch { await new Promise(r=>setTimeout(r,400)); }
+    }
+  }
+  apiOnline = false;
+  setStatus('offline','Simulation Mode');
+  document.getElementById('offlineBanner').style.display='block';
+  addLog('Backend not found — JS simulation active (all features work)', null);
+}
+
+async function retryConnection(){
+  await checkAPI();
+  if(apiOnline) await doReset();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// EPISODE MANAGEMENT
+// ══════════════════════════════════════════════════════════════════════════════
+async function doReset() {
+  stopAuto();
+  episodeReward = 0; selectedAction = null; episodeDone = false;
+  clearSelected(); updateConfirmBtn();
+
+  if(apiOnline) {
+    try {
+      const d = await apiCall('/reset','POST',{task_id:currentTask,seed:Date.now()%1000});
+      patientQueue = d.patient ? [d.patient] : [];
+      queueIndex   = 0;
+      renderQueueFromAPI(d);
+      if(d.patient) renderPatient(d.patient);
+      addLog(`New episode — task: ${currentTask}`, null);
+      return;
+    } catch { apiOnline=false; setStatus('offline','Offline'); }
+  }
+
+  // JS fallback
+  patientQueue = genQueue(currentTask);
+  queueIndex   = 0;
+  renderQueueJS(patientQueue);
+  renderPatientJS(patientQueue[0]);
+  addLog(`New episode (JS) — ${patientQueue.length} patient(s)`, null);
+  updateQueueCount();
+}
+
+async function submitAction() {
+  if(selectedAction===null||episodeDone) return;
+
+  const actionNames = ['treat_now','delay','refer'];
+  const actionLabels = ['TREAT NOW','DELAY','REFER'];
+
+  if(apiOnline) {
+    try {
+      const d = await apiCall('/step','POST',{action:selectedAction});
+      episodeReward = d.episode_reward || episodeReward;
+      const correct = d.correct;
+      const critMiss = d.critical_miss;
+      totalDecisions++;
+      if(critMiss) critMisses++;
+
+      addLog(
+        `${actionLabels[selectedAction]} on ${currentPatient?.name||'patient'} → `+
+        (correct?`<span class="pos">+correct</span>`:`<span class="neg">missed</span>`)+
+        (critMiss?` <span class="neg">⚠ CRITICAL MISS</span>`:''),
+        correct?'pos':'neg', true
+      );
+
+      updateReward(d.episode_reward||0, d.win_rate||0, d.total_episodes||totalEpisodes);
+
+      if(d.done) {
+        endEpisode(d.won);
+      } else if(d.patient && d.patient.name) {
+        renderPatient(d.patient);
+      }
+      return;
+    } catch { apiOnline=false; setStatus('offline','Offline'); }
+  }
+
+  // JS fallback
+  const patient = patientQueue[queueIndex];
+  const correct = selectedAction === patient.correctAction;
+  const critMiss = patient.severity==='CRITICAL' && selectedAction!==0;
+  totalDecisions++;
+  if(critMiss) critMisses++;
+
+  const reward = correct ? (patient.severity==='CRITICAL'?2.0:1.0) : (critMiss?-2.0:-0.5);
+  episodeReward = Math.round((episodeReward+reward)*10)/10;
+
+  addLog(
+    `${actionLabels[selectedAction]} on ${patient.name} → `+
+    (correct?`<span class="pos">+${reward} correct</span>`:`<span class="neg">${reward} wrong</span>`)+
+    (critMiss?` <span class="neg">⚠ CRITICAL MISS</span>`:''),
+    correct?'pos':'neg', true
+  );
+
+  // Mark card done
+  const cards = document.querySelectorAll('.p-card');
+  if(cards[queueIndex]) {
+    cards[queueIndex].style.opacity='0.45';
+    cards[queueIndex].style.pointerEvents='none';
+  }
+
+  queueIndex++;
+  if(queueIndex >= patientQueue.length) {
+    const won = critMisses===0 && (totalDecisions>0);
+    endEpisode(won);
+  } else {
+    renderPatientJS(patientQueue[queueIndex]);
+    renderQueueJS(patientQueue, queueIndex);
+    selectedAction=null;
+    clearSelected();
+    updateConfirmBtn();
+  }
+  updateReward(episodeReward, totalWins/Math.max(1,totalEpisodes)*100, totalEpisodes);
+}
+
+function endEpisode(won) {
+  episodeDone = true;
+  totalEpisodes++;
+  if(won) totalWins++;
+  rewardHistory.push(Math.round(episodeReward*10)/10);
+  updateChart();
+  updateReward(episodeReward, totalWins/totalEpisodes*100, totalEpisodes);
+  addLog(won?`Episode complete — VICTORY! 🏆`:`Episode complete — Defeated`, won?'pos':'neg', false);
+  document.getElementById('reasoningBox').innerHTML =
+    won ? '<strong style="color:var(--green)">✅ Episode passed!</strong><br>All patients correctly triaged. Click "New Episode" to continue.'
+        : '<strong style="color:var(--red)">❌ Episode failed.</strong><br>One or more critical misses detected. Click "New Episode" to retry.';
+  document.getElementById('confirmBtn').disabled = true;
+  document.getElementById('confirmBtn').textContent = won?'✅ Episode Complete':'❌ Episode Failed — Reset';
+  stopAuto();
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ACTION SELECTION
+// ══════════════════════════════════════════════════════════════════════════════
+function selectAction(n) {
+  if(episodeDone) return;
+  selectedAction = n;
+  clearSelected();
+  const classes = ['selected-treat','selected-delay','selected-refer'];
+  document.getElementById('btn'+n).classList.add(classes[n]);
+  updateConfirmBtn();
+
+  // Show rule-based reasoning inline
+  if(currentPatient) {
+    const p = currentPatient;
+    const actions = ['TREAT NOW','DELAY','REFER'];
+    const selected = actions[n];
+    const correct  = actions[p.correctAction||0];
+    let hint = '';
+    if(n === (p.correctAction||0)) {
+      hint = `<span style="color:var(--green)">✅ This matches clinical recommendation (${correct}).</span>`;
+    } else {
+      hint = `<span style="color:var(--yellow)">⚠ Clinical recommendation is ${correct}. Consider reviewing vitals.</span>`;
+    }
+    document.getElementById('reasoningBox').innerHTML =
+      (p.reasoning||'').replace(/\n/g,'<br>') + '<br><br>' + hint;
+  }
+}
+
+function clearSelected() {
+  ['btn0','btn1','btn2'].forEach(id=>{
+    const b = document.getElementById(id);
+    b.classList.remove('active','selected-treat','selected-delay','selected-refer');
+  });
+}
+
+function updateConfirmBtn() {
+  const btn = document.getElementById('confirmBtn');
+  if(selectedAction===null || episodeDone) {
+    btn.disabled=true;
+    btn.textContent = episodeDone?'Episode ended — Reset':'Select an action to confirm';
+    btn.className='confirm-btn';
+  } else {
+    btn.disabled=false;
+    btn.textContent=['✅ Confirm: TREAT NOW','✅ Confirm: DELAY','✅ Confirm: REFER'][selectedAction];
+    btn.className='confirm-btn ready';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════════════════════════════
+function renderQueueJS(queue, activeIdx=0) {
+  const list = document.getElementById('patientList');
+  list.innerHTML = '';
+  queue.forEach((p, i) => {
+    const sevClass = p.severity==='CRITICAL'?'crit':p.severity==='URGENT'?'urg':'stab';
+    const badgeCls = p.severity==='CRITICAL'?'red':p.severity==='URGENT'?'yellow':'blue';
+    const initials = p.name.split(' ').map(x=>x[0]).join('').slice(0,2);
+    const card = document.createElement('div');
+    card.className = `p-card ${sevClass}${i===activeIdx?' active':''}`;
+    card.onclick = () => { renderPatientJS(queue[i]); };
+    card.innerHTML = `
+      <div class="p-avatar">
+        <img src="images/${p.name}.png" alt="${p.name}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.replaceWith('${initials}')">
+      </div>
+      <div class="p-info">
+        <h4>${p.name}</h4>
+        <p>Age: ${p.age} · ${p.gender}</p>
+        <span class="badge ${badgeCls}">${p.severity}</span>
+      </div>
+      <div class="waiting-tag">Queue ${i+1}</div>`;
+    list.appendChild(card);
+  });
+  updateQueueCount(queue.length - activeIdx);
+}
+
+function renderQueueFromAPI(d) {
+  const list = document.getElementById('patientList');
+  list.innerHTML = '';
+  const p = d.patient;
+  if(!p) return;
+  const sevClass = p.severity==='CRITICAL'?'crit':p.severity==='URGENT'?'urg':'stab';
+  const badgeCls = p.severity==='CRITICAL'?'red':p.severity==='URGENT'?'yellow':'blue';
+  const initials = (p.name||'?').split(' ').map(x=>x[0]).join('').slice(0,2);
+  list.innerHTML = `
+    <div class="p-card ${sevClass} active">
+      <div class="p-avatar">
+        <img src="images/${p.name||'Patient'}.png" alt="${p.name||'Patient'}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.replaceWith('${initials}')">
+      </div>
+      <div class="p-info">
+        <h4>${p.name||'Patient'}</h4>
+        <p>Age: ${p.age||'?'} · ${p.gender||'?'}</p>
+        <span class="badge ${badgeCls}">${p.severity||'?'}</span>
+      </div>
+      <div class="waiting-tag">Queue ${d.queue_size||1}</div>
+    </div>`;
+  updateQueueCount(d.queue_size||1);
+}
+
+function renderPatientJS(p) {
+  currentPatient = p;
+  selectedAction = null;
+  clearSelected();
+  updateConfirmBtn();
+  set('patientName', `${p.name} (${p.age}, ${p.gender})`);
+  set('patientMeta', `Severity: ${p.severity} · Pain: ${p.pain}/10`);
+
+  const vClass = (v, danger, warn) =>
+    v > danger ? 'vital-danger' : v > warn ? 'vital-warn' : 'vital-ok';
+
+  const bpEl = document.getElementById('vBP');
+  bpEl.textContent = `BP: ${p.bp_sys}/${p.bp_dia} mmHg`;
+  bpEl.className = parseFloat(p.bp_sys)>180?'vital-danger':parseFloat(p.bp_sys)>140?'vital-warn':'vital-ok';
+
+  const hrEl = document.getElementById('vHR');
+  hrEl.textContent = `HR: ${p.hr} bpm`;
+  hrEl.className = parseFloat(p.hr)>130||parseFloat(p.hr)<45?'vital-danger':parseFloat(p.hr)>100?'vital-warn':'vital-ok';
+
+  const spEl = document.getElementById('vSpO2');
+  spEl.textContent = `SpO2: ${p.spo2}%`;
+  spEl.className = parseFloat(p.spo2)<90?'vital-danger':parseFloat(p.spo2)<94?'vital-warn':'vital-ok';
+
+  const tmpEl = document.getElementById('vTemp');
+  tmpEl.textContent = `Temp: ${p.temp}°C`;
+  tmpEl.className = parseFloat(p.temp)>39.5?'vital-danger':parseFloat(p.temp)>38?'vital-warn':'vital-ok';
+
+  const rrEl = document.getElementById('vRR');
+  rrEl.textContent = `RR: ${p.rr} /min`;
+  rrEl.className = parseFloat(p.rr)>25?'vital-danger':parseFloat(p.rr)>20?'vital-warn':'vital-ok';
+
+  set('vComplaint', COMPLAINTS[p.complaint]||'Unknown');
+  set('vPain', `Pain score: ${p.pain}/10`);
+  set('vHistory', p.history||'No significant history');
+  document.getElementById('reasoningBox').innerHTML =
+    (p.reasoning||'Awaiting clinical assessment...').replace(/\n/g,'<br>');
+}
+
+function renderPatient(p) {
+  currentPatient = p;
+  selectedAction = null; clearSelected(); updateConfirmBtn();
+  set('patientName', `${p.name||'Patient'} (${p.age||'?'}, ${p.gender||'?'})`);
+  set('patientMeta', `Severity: ${p.severity||'?'}`);
+
+  const danger=(el,v,d,w,unit)=>{el.textContent=`${el.id.replace('v','')}: ${v} ${unit}`;el.className=parseFloat(v)>d?'vital-danger':parseFloat(v)>w?'vital-warn':'vital-ok';};
+
+  const bpEl=document.getElementById('vBP'); bpEl.textContent=`BP: ${p.bp_systolic||'?'}/${p.bp_diastolic||'?'} mmHg`; bpEl.className=parseFloat(p.bp_systolic)>180?'vital-danger':parseFloat(p.bp_systolic)>140?'vital-warn':'vital-ok';
+  const hrEl=document.getElementById('vHR'); hrEl.textContent=`HR: ${p.heart_rate||'?'} bpm`; hrEl.className=parseFloat(p.heart_rate)>130?'vital-danger':parseFloat(p.heart_rate)>100?'vital-warn':'vital-ok';
+  const spEl=document.getElementById('vSpO2'); spEl.textContent=`SpO2: ${p.spo2||'?'}%`; spEl.className=parseFloat(p.spo2)<90?'vital-danger':parseFloat(p.spo2)<94?'vital-warn':'vital-ok';
+  const tmpEl=document.getElementById('vTemp'); tmpEl.textContent=`Temp: ${p.temperature||'?'}°C`; tmpEl.className=parseFloat(p.temperature)>39.5?'vital-danger':'vital-ok';
+  const rrEl=document.getElementById('vRR'); rrEl.textContent=`RR: ${p.resp_rate||'?'} /min`; rrEl.className=parseFloat(p.resp_rate)>25?'vital-danger':'vital-ok';
+
+  set('vComplaint', COMPLAINTS[p.complaint]||'Unknown');
+  set('vPain', `Pain score: ${p.pain_score||'?'}/10`);
+  const hist=[];
+  if(p.has_cardiac) hist.push('Cardiac History');
+  if(p.has_diabetes) hist.push('Diabetes');
+  set('vHistory', hist.length?hist.join(', '):'No significant history');
+  document.getElementById('reasoningBox').innerHTML=(p.reasoning||'Awaiting assessment...').replace(/\n/g,'<br>');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// AUTO PLAY
+// ══════════════════════════════════════════════════════════════════════════════
+function toggleAuto() {
+  autoRunning = !autoRunning;
+  const btn = document.getElementById('autoBtn');
+  if(autoRunning){
+    btn.textContent='⏸ Pause Auto';
+    btn.classList.add('active');
+    autoInterval = setInterval(doStep, 1200);
+  } else {
+    stopAuto();
+  }
+}
+
+function stopAuto() {
+  autoRunning = false;
+  clearInterval(autoInterval);
+  const btn = document.getElementById('autoBtn');
+  btn.textContent='▶ Auto Play';
+  btn.classList.remove('active','stop');
+}
+
+async function doStep() {
+  if(episodeDone){ stopAuto(); await doReset(); return; }
+  // Rule-based agent decision
+  const action = ruleBasedDecision(currentPatient);
+  selectAction(action);
+  await new Promise(r=>setTimeout(r,300));
+  await submitAction();
+}
+
+function ruleBasedDecision(p) {
+  if(!p) return 1;
+  const spo2 = parseFloat(p.spo2||p.spo2_est||98);
+  const bpSys = parseFloat(p.bp_sys||p.bp_systolic||120);
+  const hr = parseFloat(p.hr||p.heart_rate||80);
+  const temp = parseFloat(p.temp||p.temperature||37);
+  const rr = parseFloat(p.rr||p.resp_rate||16);
+  const complaint = parseInt(p.complaint||0);
+  const cardiac = parseInt(p.cardiac||p.has_cardiac||0);
+
+  if(spo2<90||bpSys>180||bpSys<90||hr>130||hr<45||temp>39.5||rr>25) return 0;
+  if(cardiac===1&&(hr>110||bpSys>155)) return 0;
+  if(complaint===7||complaint===8) return 2;
+  if(bpSys>150||hr>105) return 0;
+  return 1;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// GRADER
+// ══════════════════════════════════════════════════════════════════════════════
+async function runGrader() {
+  const gr = document.getElementById('gradeResult');
+  gr.style.display='block';
+  gr.className='grade-result';
+  gr.innerHTML='<span class="spinner"></span> Running grader (50 episodes)...';
+
+  if(apiOnline){
+    try {
+      const d = await apiCall('/grade','POST',{task_id:currentTask,n_episodes:50,agent:'rule_based'});
+      gr.className=`grade-result ${d.task_passed?'pass':'fail'}`;
+      gr.innerHTML=`
+        <div style="font-weight:700;color:${d.task_passed?'var(--green)':'var(--red)'};margin-bottom:6px;">
+          ${d.task_passed?'✅ TASK PASSED':'❌ TASK FAILED'}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+          <span style="color:var(--muted);">Accuracy</span><span>${d.avg_accuracy}%</span>
+          <span style="color:var(--muted);">Critical Miss</span><span style="color:${parseFloat(d.avg_critical_miss)>5?'var(--red)':'var(--green)'}">${d.avg_critical_miss}%</span>
+          <span style="color:var(--muted);">Win Rate</span><span>${d.win_rate}%</span>
+          <span style="color:var(--muted);">Avg Reward</span><span>${d.avg_reward}</span>
+        </div>`;
+      addLog(`Grader: ${d.task_passed?'PASSED':'FAILED'} — Acc:${d.avg_accuracy}% CritMiss:${d.avg_critical_miss}%`, d.task_passed?'pos':'neg', false);
+      return;
+    } catch { apiOnline=false; }
+  }
+
+  // JS grader simulation
+  let correct=0, critMiss=0, total=0;
+  for(let i=0;i<50;i++){
+    const queue = genQueue(currentTask);
+    queue.forEach(p=>{
+      const action = ruleBasedDecision(p);
+      total++;
+      if(action===p.correctAction) correct++;
+      if(p.severity==='CRITICAL'&&action!==0) critMiss++;
+    });
+  }
+  const acc = Math.round(correct/total*100);
+  const cm  = Math.round(critMiss/Math.max(1,total)*100);
+  const threshold = currentTask==='triage_easy'?85:currentTask==='triage_medium'?72:60;
+  const passed = acc>=threshold && cm<5;
+  gr.className=`grade-result ${passed?'pass':'fail'}`;
+  gr.innerHTML=`
+    <div style="font-weight:700;color:${passed?'var(--green)':'var(--red)'};margin-bottom:6px;">
+      ${passed?'✅ TASK PASSED':'❌ TASK FAILED'} (JS simulation)
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+      <span style="color:var(--muted);">Accuracy</span><span>${acc}%</span>
+      <span style="color:var(--muted);">Critical Miss</span><span style="color:${cm>5?'var(--red)':'var(--green)'}">${cm}%</span>
+      <span style="color:var(--muted);">Threshold</span><span>${threshold}%</span>
+    </div>`;
+  addLog(`JS Grader: ${passed?'PASSED':'FAILED'} — Acc:${acc}% CritMiss:${cm}%`, passed?'pos':'neg', false);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
+const set = (id,v)=>{ const e=document.getElementById(id); if(e)e.textContent=v; };
+
+function setStatus(cls, txt) {
+  const el = document.getElementById('apiStatus');
+  const tx = document.getElementById('apiStatusText');
+  el.className = `status-pill ${cls}`;
+  tx.textContent = txt;
+}
+
+function addLog(msg, type, isHTML=false) {
+  const area = document.getElementById('logArea');
+  const el   = document.createElement('div');
+  el.className='log-entry';
+  const time = new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(isHTML){
+    el.innerHTML=`${time} — ${msg}`;
+  } else {
+    el.textContent=`${time} — ${msg}`;
+    if(type==='pos') el.style.color='var(--green)';
+    else if(type==='neg') el.style.color='var(--red)';
+  }
+  area.insertBefore(el, area.firstChild);
+  while(area.children.length>20) area.removeChild(area.lastChild);
+  logEntries.unshift({time,msg,type});
+  set('logCount', `${logEntries.length} entries`);
+}
+
+function updateReward(reward, winRate, episodes) {
+  const rEl = document.getElementById('mReward');
+  rEl.textContent = (reward>=0?'+':'')+parseFloat(reward).toFixed(1);
+  rEl.className = reward>=0?'green':'';
+  if(reward<0) rEl.style.color='var(--red)';
+  set('mWinRate', Math.round(winRate)+'%');
+  set('mEpisodes', episodes);
+  const cm = totalDecisions>0?Math.round(critMisses/totalDecisions*100):0;
+  const cmEl = document.getElementById('mCritMiss');
+  cmEl.textContent = cm+'%';
+  cmEl.className = cm>5?'':'green';
+  if(cm>5) cmEl.style.color='var(--red)';
+  updateChart();
+}
+
+function updateQueueCount(n) {
+  set('queueCount', `${n||patientQueue.length} waiting`);
+}
+
+function onTaskChange() {
+  currentTask = document.getElementById('taskSelect').value;
+  const labels = {triage_easy:'Easy',triage_medium:'Medium',triage_hard:'Hard'};
+  set('taskLabel', labels[currentTask]);
+  stopAuto();
+  doReset();
+}
+
+// Clock
+function updateClock(){
+  const n=new Date();
+  const h=n.getHours()%12||12,m=String(n.getMinutes()).padStart(2,'0'),s=String(n.getSeconds()).padStart(2,'0'),a=n.getHours()>=12?'PM':'AM';
+  set('clockEl',`${h}:${m}:${s} ${a}`);
+  const days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  set('dateEl',`${days[n.getDay()]}, ${months[n.getMonth()]} ${n.getDate()}`);
+}
+setInterval(updateClock,1000); updateClock();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CHART
+// ══════════════════════════════════════════════════════════════════════════════
+const ctx = document.getElementById('perfChart').getContext('2d');
+const grad = ctx.createLinearGradient(0,0,0,160);
+grad.addColorStop(0,'rgba(0,229,255,0.35)');
+grad.addColorStop(1,'rgba(0,229,255,0)');
+
+const perfChart = new Chart(ctx,{
+  type:'line',
+  data:{
+    labels:[],
+    datasets:[{
+      data:[], borderColor:'#00e5ff', backgroundColor:grad,
+      borderWidth:2, pointBackgroundColor:'#00e5ff', pointRadius:3,
+      fill:true, tension:0.3
+    }]
+  },
+  options:{
+    responsive:true, maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{enabled:true,backgroundColor:'#152232',borderColor:'#1e3246',borderWidth:1}},
+    scales:{
+      x:{grid:{display:false},ticks:{color:'#8b9eb3',font:{size:9}},title:{display:true,text:'Episode',color:'#8b9eb3',font:{size:9}}},
+      y:{grid:{color:'#1e3246'},ticks:{color:'#8b9eb3',font:{size:9}},title:{display:true,text:'Reward',color:'#8b9eb3',font:{size:9}}}
+    }
+  }
+});
+
+function updateChart(){
+  if(!rewardHistory.length) return;
+  perfChart.data.labels = rewardHistory.map((_,i)=>i+1);
+  perfChart.data.datasets[0].data = rewardHistory;
+  perfChart.update('none');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════════════════
+(async()=>{
+  await checkAPI();
+  await doReset();
+})();
+</script>
+</body>
+</html>pooja paste code here ....... before pasting check rae the changes done .......... then paste 
