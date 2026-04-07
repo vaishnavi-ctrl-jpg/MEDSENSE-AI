@@ -48,18 +48,20 @@ A nurse arrives at a patient. 30 seconds. Chest pain, elevated BP, cardiac histo
 
 ---
 
-## ⚡ Quickstart
+## ⚡ Quickstart & Deployment
 
+### 🌐 Live Demo & HF Space
+Our interactive dashboard and model benchmark results are deployed live!
+👉 **[Insert your Live Dashboard Link Here]**
+
+### 🐳 Running with Docker (Recommended)
+Our environment is fully containerized for reproducibility as per hackathon specs.
 ```bash
-# 1. Install
-pip install flask gymnasium numpy pyyaml torch
+# Build the image
+docker build -t medsense-api .
 
-# 2. Start backend
-python backend/api.py
-
-# 3. Open dashboard
-# Double-click frontend/index.html in Chrome
-# OR: python start.py   (opens both automatically)
+# Run the container
+docker run -p 8000:8000 medsense-api
 ```
 
 ---
@@ -87,7 +89,30 @@ Reward signal reinforces the right behaviour
   Correct critical patient identified → +2.0
   Missed critical patient             → -2.0  (hard clinical limit: <5% miss rate)
 ```
+## 🔌 OpenEnv Interface & Specs
 
+Our project fully implements the OpenEnv standard for reproducible RL evaluation.
+
+### 1. Standard Interface
+* **`reset()`**: Initializes the ED environment and generates a stochastic patient queue.
+* **`step(action)`**: Advances the environment by one decision step. Returns `(observation, reward, terminated, truncated, info)`.
+* **`state()`**: Returns the complete internal state of the ED.
+
+### 2. Action & Observation Space
+* **Action Space (Discrete: 3):** The wrapper automatically converts LLM text (e.g., "Treat patient 2") into these structured actions:
+  * `0`: **TREAT NOW** (Immediate ED Admission)
+  * `1`: **DELAY** (Place in Waiting Area)
+  * `2`: **REFER** (To Urgent Care / Clinic)
+* **Observation Space:** A structured vector `[age, sys_bp, dia_bp, hr, spo2, temp, complaint_encoded]`.
+
+### 3. Reward Function
+Our shaped reward system heavily penalizes clinical mistakes while rewarding efficiency:
+| Outcome | Reward | Description |
+|---|---|---|
+| **Correct Action** | `+1.0` | Decision perfectly matches clinical guidelines. |
+| **Critical Miss** | `-2.0` | ⚠️ Delaying or referring a CRITICAL patient. |
+| **Over-triage** | `-0.5` | Treating a stable patient, wasting valuable ED beds. |
+| **Wrong Queue** | `-0.3` | Incorrectly referring an urgent patient. |
 ---
 
 ## 📊 Benchmark Results *(verified — 50 episodes, seed=42)*
