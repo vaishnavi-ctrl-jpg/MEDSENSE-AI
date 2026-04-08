@@ -1,5 +1,6 @@
- from fastapi import FastAPI
+from fastapi import FastAPI
 from medsense.openenv_wrapper import MedSenseOpenEnv
+import uvicorn
 
 app = FastAPI(title="MedSense AI OpenEnv")
 
@@ -23,10 +24,9 @@ async def state():
 
 # ✅ REQUIRED BY OPENENV
 def main():
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    uvicorn.run("server.app:app", host="0.0.0.0", port=7860, reload=False)
 
 
-# ✅ REQUIRED TRIGGER
+# ✅ ENTRYPOINT
 if __name__ == "__main__":
     main()
