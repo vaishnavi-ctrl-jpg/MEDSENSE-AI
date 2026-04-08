@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 7860
 
 # 7. The command to start your FastAPI server
-CMD ["uvicorn", "server.openenv_api:app", "--host", "0.0.0.0", "--port", "7860"]
+CMD ["uvicorn", "backend.api:app", "--host", "0.0.0.0", "--port", "7860"]
