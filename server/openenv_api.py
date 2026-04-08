@@ -3,13 +3,13 @@ from pydantic import BaseModel
 from typing import Any, Dict, Optional
 import uvicorn
 
-# TODO: Uncomment this exactly when ViVi finishes her wrapper!
-# from medsense.openenv_wrapper import MedSenseOpenEnv
+# ViVi's wrapper imported
+from medsense.openenv_wrapper import MedSenseOpenEnv
 
 app = FastAPI(title="MedSense AI - OpenEnv API")
 
-# Initialize ViVi's environment wrapper (Uncomment when ready)
-# env = MedSenseOpenEnv()
+# Initialize ViVi's environment wrapper 
+env = MedSenseOpenEnv()
 
 # --- PYDANTIC MODELS (Validation) ---
 class ResetRequest(BaseModel):
@@ -26,12 +26,8 @@ class StepRequest(BaseModel):
 @app.post("/reset")
 async def reset(req: ResetRequest):
     try:
-        # TODO: Uncomment ViVi's async call when ready
-        # obs = await env.reset(task_id=req.task_id, seed=req.seed)
-        
-        # Temporary mock response so you can test the API right now
-        obs = {"status": "mock_reset_ready", "task": req.task_id}
-        
+        # Real reset logic connected
+        obs = await env.reset(task_id=req.task_id, seed=req.seed)
         return {"observation": obs, "task_id": req.task_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -39,16 +35,8 @@ async def reset(req: ResetRequest):
 @app.post("/step")
 async def step(req: StepRequest):
     try:
-        # TODO: Uncomment ViVi's async call when ready
-        # step_result = await env.step(req.action)
-        
-        # Temporary mock response 
-        step_result = {
-            "observation": {"status": "mock_step_taken"},
-            "reward": 1.0, 
-            "done": False, 
-            "info": {"parsed_action": req.action}
-        }
+        # Real step logic connected
+        step_result = await env.step(req.action)
         return step_result
     except Exception as e:
         # If ViVi's parsing fails, it gets caught here
@@ -57,10 +45,9 @@ async def step(req: StepRequest):
 @app.get("/state")
 async def state():
     try:
-        # TODO: Uncomment ViVi's async call when ready
-        # current_state = await env.state()
-        
-        return {"state": {"mock_vitals": "stable", "queue": 0}}
+        # Real state logic connected
+        current_state = await env.state()
+        return {"state": current_state}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
