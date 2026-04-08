@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # 6. Open the port that FastAPI uses
-EXPOSE 8000
+EXPOSE 7860
 
 # 7. The command to start your FastAPI server
-CMD ["uvicorn", "server.openenv_api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "server.openenv_api:app", "--host", "0.0.0.0", "--port", "7860"]
