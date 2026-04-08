@@ -1,3 +1,11 @@
+---
+title: MedSense AI
+emoji: 🤖
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+---
 <<<<<<< HEAD
 <div align="center">
 
