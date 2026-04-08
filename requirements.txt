@@ -3,6 +3,9 @@ numpy>=1.24.0
 pyyaml>=6.0
 flask>=2.0.0
 torch>=2.0.0
+fastapi
+uvicorn
+pydantic
 
 # NOTE: flask-cors is NOT needed — CORS is handled natively in api.py
 # Do NOT pip install flask-cors

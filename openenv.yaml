@@ -1,137 +1,70 @@
 name: medsense-triage
 version: "1.0"
 description: >
-  MedSense AI is a hospital emergency triage RL environment.
-  An agent observes patient vital signs, symptoms, and medical history,
-  then decides the correct priority action: treat_now, delay, or refer.
-  Vital signs are noisy (POMDP). Decisions are explainable.
-
+  MedSense AI is a hospital emergency triage RL environment where an agent learns 
+  to prioritize patients based on vitals and symptoms. Supports text-based 
+  actions for LLM integration.
 domain: healthcare
 real_world: true
-language: python
-framework: gymnasium
 
 authors:
   - name: ViVi
-    role: Environment + OpenEnv Compliance
-  - name: Nidz
-    role: Grader + Backend API
+    role: "Environment Wrapper + LLM Parsing Logic"
+  - name: Nidhi
+    role: "FastAPI Server + Dockerization + OpenEnv Validation"
   - name: Pooja
-    role: Frontend + Documentation
+    role: "Results Visualization + Documentation + UI"
 
 tasks:
   - id: triage_easy
     description: "Single patient, unambiguous vital signs, no comorbidities"
     difficulty: easy
-    patients_per_episode: 1
     success_threshold: 0.85
-    config_file: tasks/triage_easy.yaml
-
   - id: triage_medium
     description: "Single patient with comorbidities and ambiguous presentation"
     difficulty: medium
-    patients_per_episode: 1
     success_threshold: 0.72
-    config_file: tasks/triage_medium.yaml
-
   - id: triage_hard
-    description: "Multi-patient queue under time pressure"
+    description: "Multi-patient queue under time pressure (Hard Mode)"
     difficulty: hard
-    patients_per_episode: 5
     success_threshold: 0.60
-    config_file: tasks/triage_hard.yaml
 
+# --- CRITICAL CHANGE: Pointing to your FastAPI server ---
 interface:
-  python_class: MedSenseEnv
-  module: medsense.triage_env
-  reset:  "env.reset(task_id='triage_easy', seed=42)"
-  step:   "env.step(action)  ->  obs, reward, terminated, truncated, info"
-  close:  "env.close()"
+  type: api
+  base_url: "http://localhost:8000"
+  reset: "POST /reset"
+  step: "POST /step"
+  state: "GET /state"
 
 observation_space:
   type: Dict
-  fields:
-    bp_systolic:
-      type: float
-      unit: mmHg
-      normal_range: [90, 120]
-    bp_diastolic:
-      type: float
-      unit: mmHg
-      normal_range: [60, 80]
-    heart_rate:
-      type: float
-      unit: bpm
-      normal_range: [60, 100]
-    spo2:
-      type: float
-      unit: percent
-      normal_range: [95, 100]
-    temperature:
-      type: float
-      unit: celsius
-      normal_range: [36.1, 37.2]
-    resp_rate:
-      type: float
-      unit: breaths_per_min
-      normal_range: [12, 20]
-    chief_complaint:
-      type: int
-      encoding: categorical
-      n_categories: 10
-    pain_score:
-      type: int
-      range: [0, 10]
-    age:
-      type: int
-      range: [18, 95]
-    has_cardiac_history:
-      type: int
-      values: [0, 1]
-    has_diabetes:
-      type: int
-      values: [0, 1]
-    has_respiratory_disease:
-      type: int
-      values: [0, 1]
-    queue_length:
-      type: int
-      range: [0, 10]
-      note: "Hard mode only — 0 in easy/medium"
+  schema:
+    bp_systolic: float
+    heart_rate: float
+    spo2: float
+    temperature: float
+    chief_complaint: int
+    has_cardiac_history: int
+    queue_length: int
 
+# --- CRITICAL CHANGE: Matching ViVi's Text-to-Action requirement ---
 action_space:
-  type: Discrete
-  n: 3
-  actions:
-    0:
-      name: treat_now
-      description: "Immediate emergency treatment required"
-    1:
-      name: delay
-      description: "Non-urgent — move to waiting queue"
-    2:
-      name: refer
-      description: "Transfer to specialist or external facility"
+  type: Text
+  description: "LLM-generated text (e.g., 'Treat patient 1') parsed into clinical decisions."
 
 reward:
-  correct_priority:      +1.0
-  correct_action:        +1.0
-  ambiguous_bonus:       +2.0
-  missed_critical:       -1.0
-  over_triage:           -0.5
-  wrong_refer:           -0.3
-  timeout:               -0.2
-  critical_deteriorated: -2.0
+  correct_action: +1.0
+  missed_critical: -2.0
+  over_triage: -0.5
+  parsing_error: -0.1
+  timeout: -0.2
 
 grader:
-  class: TriageGrader
-  module: medsense.grader
   key_metric: critical_miss_rate
-  hard_requirement:
-    metric: critical_miss_rate
-    threshold: 0.05
-    description: "Agent must correctly treat critical patients >95% of the time"
+  pass_condition: "critical_miss_rate < 0.05"
 
-reproducible: true
-seed_support: true
-parallel_safe: true
+docker:
+  image: medsense-api
+  port: 8000
+  build_context: .
