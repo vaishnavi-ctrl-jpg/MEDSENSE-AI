@@ -16,5 +16,5 @@ COPY . .
 # 6. Open the port that FastAPI uses
 EXPOSE 7860
 
-# 7. The command to start your FastAPI server
-CMD ["gunicorn", "-b", "0.0.0.0:7860", "backend.api:app"]
+# 7. The command to start your FastAPI app when the container runs
+CMD ["uvicorn", "server.openenv_api:app", "--host", "0.0.0.0", "--port", "7860"]
