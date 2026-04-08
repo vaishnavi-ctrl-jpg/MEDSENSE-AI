@@ -8,3 +8,7 @@ agents/*.pth
 results/
 *.log
 .DS_Store
+frontend/images/
+*.png
+*.jpg
+*.jpeg

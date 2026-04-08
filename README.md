@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <div align="center">
 
 # 🏥 MedSense AI
@@ -292,3 +293,15 @@ pytest tests/ -v
 [![View on GitHub](https://img.shields.io/badge/View%20on%20GitHub-vaishnavi--ctrl--jpg%2FMEDSENSE--AI-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/vaishnavi-ctrl-jpg/MEDSENSE-AI)
 
 </div>
+=======
+---
+title: MEDSENSE AI
+emoji: 🏆
+colorFrom: green
+colorTo: yellow
+sdk: docker
+pinned: false
+---
+
+Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
+>>>>>>> bcc7be4d2ce2bf15b91ccf78be2e18704473b132
