@@ -6,7 +6,7 @@ torch>=2.0.0
 fastapi
 uvicorn
 pydantic
-openai
+openai>=1.0.0
 
 # NOTE: flask-cors is NOT needed — CORS is handled natively in api.py
 # Do NOT pip install flask-cors
